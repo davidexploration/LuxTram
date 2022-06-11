@@ -1,0 +1,19 @@
+{
+  "name": "luxtram",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "node ./src/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@azure/cognitiveservices-customvision-prediction": "^5.1.2",
+    "@azure/cognitiveservices-customvision-training": "^5.2.0",
+    "axios": "^0.27.2",
+    "dotenv": "^16.0.1",
+    "node-webcam": "^0.8.0"
+  }
+}
