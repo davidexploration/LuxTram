@@ -1,10 +1,12 @@
 const util = require('util');
 const fs = require('fs');
 const axios = require('axios');
+const NodeWebcam = require('node-webcam');
+const TrainingApi = require("@azure/cognitiveservices-customvision-training");
+const PredictionApi = require("@azure/cognitiveservices-customvision-prediction");
+const msRest = require("@azure/ms-rest-js");
 
 require("dotenv").config();
-
-var NodeWebcam = require('node-webcam');
 
 var opts = {
     width: 1440,
@@ -15,57 +17,52 @@ var opts = {
     saveShots: true,
     output: "jpeg",
     device: false,
-    callbackReturn: "location",
+    //callbackReturn: "location",
+    callbackReturn: "buffer",
     verbose: false
 };
 
-const TrainingApi = require("@azure/cognitiveservices-customvision-training");
-const PredictionApi = require("@azure/cognitiveservices-customvision-prediction");
-const msRest = require("@azure/ms-rest-js");
-
-var isthereatram = false;
-var therewasatram = false;
-
 var Webcam = NodeWebcam.create(opts);
+var tram_now = tram_before = false;
 
 function main () {
-  Webcam.capture( "test_picture", function( err, data ) { checktram(); } );
+  Webcam.capture( "test_picture", function( err, data ) { checktram(data); } );
   setTimeout(() => main(), 3000);
 }
 
-async function checktram() {
+async function checktram(testFile) {
 
-  const testFile = fs.readFileSync(`./test_picture.jpg`);
+  //const testFile = fs.readFileSync(`./test_picture.jpg`);
 
   const predictionKey = process.env["predictionKey"];
   const predictionResourceId = process.env["predictionResourceId"];
   const predictionEndpoint = process.env["predictionEndpoint"];
   const hueendpoint = process.env["hueendpoint"];
-
+  const predictionModelID = process.env["predictionModelID"];
+  const predictionModelTrain = process.env["predictionModelTrain"];
 
   const predictor_credentials = new msRest.ApiKeyCredentials({ inHeader: { "Prediction-key": predictionKey } });
   const predictor = new PredictionApi.PredictionAPIClient(predictor_credentials, predictionEndpoint);
+  const results = await predictor.detectImage(predictionModelID, predictionModelTrain, testFile);
 
-  const results = await predictor.detectImage("4e46d5ae-3b35-4df0-997e-6feecdeb760e", "Iteration2", testFile);
-
-  // Show results
-
-  var isthereatram = false;
+  tram_now = false;
   results.predictions.forEach(predictedResult => {
-      if (predictedResult.tagName == "tram" && predictedResult.probability > 0.7) {
-        console.log("Detected: " + predictedResult.tagName + "("+predictedResult.probability * 100+")")
-        isthereatram = true;
+      if (predictedResult.tagName == "tram" && predictedResult.probability > 0.9) {
+        console.log("\nDetected: " + predictedResult.tagName + "("+predictedResult.probability * 100+")")
+        tram_now = true;
       }
   });
-  if (isthereatram) {
-    axios.get("https://huecontrol.azurewebsites.net/api/HttpTrigger1?code="+hueendpoint+"&action=on");
-    therewasatram = true;
-    console.log("Tram ! ... switch light on");
-  }
-  else if (therewasatram) {
-    therewasatram = false;
-    axios.get("https://huecontrol.azurewebsites.net/api/HttpTrigger1?code="+hueendpoint+"&action=off");
-    console.log("No more tram ... switch light off");
+
+  if (tram_now != tram_before) {
+    if (tram_now) {
+      axios.get("https://huecontrol.azurewebsites.net/api/HttpTrigger1?code="+hueendpoint+"&action=on");
+      console.log("Tram ! ... switch light on\n");
+    }
+    else {
+      axios.get("https://huecontrol.azurewebsites.net/api/HttpTrigger1?code="+hueendpoint+"&action=off");
+      console.log("No more tram ... switch light off\n");
+    }
+    tram_before = tram_now;
   }
   else {
     console.log("Still no tram ... no change of light");

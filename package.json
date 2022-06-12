@@ -1,13 +1,13 @@
 {
   "name": "luxtram",
   "version": "1.0.0",
-  "description": "",
+  "description": "Detect if a Luxembourg tram is passing based on a light training of the Custom Vision model in Azure",
   "main": "main.js",
   "scripts": {
     "start": "node ./src/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "David",
   "license": "ISC",
   "dependencies": {
     "@azure/cognitiveservices-customvision-prediction": "^5.1.2",
